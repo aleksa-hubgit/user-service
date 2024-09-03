@@ -16,6 +16,6 @@ WORKDIR /
 
 COPY --from=builder /user-service /user-service
 
-EXPOSE 8080
+EXPOSE 8082
 
 CMD ["./user-service"]

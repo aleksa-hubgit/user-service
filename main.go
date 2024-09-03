@@ -1,32 +1,40 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"net/http"
+	"log"
+	"os"
 
-	"github.com/gorilla/mux"
+	"github.com/aleksa-hubgit/user-service/data"
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 )
 
 func main() {
-	router := mux.NewRouter()
-	router.HandleFunc("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		id := vars["id"]
-		fmt.Fprint(w, "Get requests for id: ", id)
-	}).Methods("GET")
-	router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Get requests")
-	}).Methods("GET")
-	router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Post requests")
-	}).Methods("POST")
-	router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Put requests")
-	}).Methods("PUT")
-	router.HandleFunc("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		id := vars["id"]
-		fmt.Fprint(w, "Delete requests for id: ", id)
-	}).Methods("DELETE")
-	http.ListenAndServe(":8080", router)
+	username := os.Getenv("DATABASE_USERNAME")
+	password := os.Getenv("DATABASE_PASSWORD")
+	hostname := os.Getenv("DATABASE_HOSTNAME")
+	port := os.Getenv("DATABASE_PORT")
+	name := os.Getenv("DATABASE_NAME")
+	connStr := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s", username, password, hostname, port, name)
+	// connStr := "postgresql://token:token@localhost:5432/token"
+	fmt.Println(connStr)
+	conn, err := pgx.Connect(context.Background(), connStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	database := data.New(conn)
+	defer conn.Close(context.Background())
+	service := NewUserService(database)
+	handler := NewUserHandler(service)
+	r := gin.Default()
+	r.GET("/:username", handler.GetUserByUsername)
+	r.GET("/", handler.ListUsers)
+	r.PUT("/", handler.UpdateUser)
+	r.POST("/", handler.CreateUser)
+	r.DELETE("/", handler.DeleteUser)
+	if err := r.Run(":8080"); err != nil {
+		log.Fatalf("could not run server: %v", err)
+	}
 }
