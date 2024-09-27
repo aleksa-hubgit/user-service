@@ -29,11 +29,14 @@ func main() {
 	service := NewUserService(database)
 	handler := NewUserHandler(service)
 	r := gin.Default()
-	r.GET("/:username", handler.GetUserByUsername)
-	r.GET("/", handler.ListUsers)
-	r.PUT("/", handler.UpdateUser)
-	r.POST("/", handler.CreateUser)
-	r.DELETE("/", handler.DeleteUser)
+	group := r.Group("/users")
+	{
+		group.GET("/:username", handler.GetUserByUsername)
+		group.GET("/", handler.ListUsers)
+		group.PUT("/", handler.UpdateUser)
+		group.POST("/", handler.CreateUser)
+		group.DELETE("/", handler.DeleteUser)
+	}
 	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("could not run server: %v", err)
 	}
